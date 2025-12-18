@@ -1,3 +1,4 @@
+#include "SDL3/SDL_events.h"
 #include "SDL3/SDL_init.h"
 #include "board.h"
 #include "draw.h"
@@ -37,18 +38,14 @@ int main(int argc, char *argv[]) {
     while (SDL_PollEvent(&ev)) {
       if (ev.type == SDL_EVENT_QUIT)
         quit = true;
+      if (ev.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
+        boardHandleClick(board, ev.button.x, ev.button.y, &boardRect);
     }
 
-    // Board
     SDL_SetRenderDrawColor(renderer, 15, 82, 0, 255);
     SDL_RenderClear(renderer);
 
     SDL_SetRenderDrawColor(renderer, 28, 150, 0, 255);
-
-    // const SDL_FRect rect = {20.f, 120.f, 760.f, 760.f};
-    // SDL_RenderFillRect(renderer, &rect);
-    // SDL_SetRenderDrawColor(renderer, 5, 28, 0, 255);
-    // SDL_RenderRect(renderer, &rect);
 
     boardDraw(board, renderer, &boardRect);
 

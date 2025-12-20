@@ -1,10 +1,19 @@
 #include "board.h"
-#include "SDL3/SDL_log.h"
-#include "SDL3/SDL_mouse.h"
-#include "SDL3/SDL_rect.h"
-#include "SDL3/SDL_render.h"
 #include "draw.h"
 #include <stdlib.h>
+
+#define _BOARD_NUM_DIRECTIONS 8
+const int MOVE_DIRECTIONS[_BOARD_NUM_DIRECTIONS][2] = {
+    {-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1},
+};
+
+#define IN_BOUNDS(xp, yp, rect)                                                \
+  ((xp) >= (rect)->x) && ((xp) < ((rect)->x + (rect)->w)) &&                   \
+      ((yp) >= (rect)->y) && ((yp) < ((rect)->y + (rect)->h))
+
+#define CHECK_NULL(val)                                                        \
+  if ((val) == NULL)                                                           \
+    return;
 
 gameBoard *boardInit() {
   gameBoard *board = malloc(sizeof(*board));
@@ -12,6 +21,8 @@ gameBoard *boardInit() {
     return NULL;
 
   board->turn = CELL_WHITE;
+  board->scoreWhite = 2;
+  board->scoreBlack = 2;
 
   for (int x = 0; x < 8; ++x) {
     for (int y = 0; y < 8; ++y) {
@@ -27,11 +38,28 @@ gameBoard *boardInit() {
   return board;
 }
 
-void boardScore(gameBoard *board, int *scoreBlack, int *scoreWhite) {}
+void boardReCalcScore(gameBoard *board) {
+  CHECK_NULL(board);
 
-#define _BOARD_NUM_DIRECTIONS 8
+  board->scoreWhite = 0;
+  board->scoreBlack = 0;
+  for (int x = 0; x < 8; ++x) {
+    for (int y = 0; y < 8; ++y) {
+      switch (board->state[y][x]) {
+      case CELL_BLACK:
+        board->scoreBlack++;
+        break;
+      case CELL_WHITE:
+        board->scoreWhite++;
+        break;
+      default:
+        break;
+      }
+    }
+  }
+}
 
-boardCell reverseCell(boardCell cell) {
+boardCell reverseCell(const boardCell cell) {
   switch (cell) {
   case CELL_WHITE:
     return CELL_BLACK;
@@ -45,43 +73,32 @@ boardCell reverseCell(boardCell cell) {
 bool isDirectionCorrect(const gameBoard *board, int x, int y, int dx, int dy) {
   boardCell revTurn = reverseCell(board->turn);
 
-  int delta = 0;
-  int nx = x + dx;
-  int ny = y + dy;
+  if (board->state[y + dy][x + dx] != revTurn)
+    return false;
+
+  int ny = y + 2 * dy;
+  int nx = x + 2 * dx;
   while (nx >= 0 && nx < 8 && ny >= 0 && ny < 8) {
     if (board->state[ny][nx] == CELL_EMPTY)
-      break;
-    if (board->state[ny][nx] == revTurn)
-      goto _cell_while_cont;
+      return false;
     if (board->state[ny][nx] == board->turn) {
-      if (delta == 0)
-        return false;
-      else
-        return true;
+      return true;
     }
 
-  _cell_while_cont:
     nx += dx;
     ny += dy;
-    delta++;
   }
   return false;
 }
 
 bool isMoveCorrect(const gameBoard *board, int x, int y) {
-  const int directions[_BOARD_NUM_DIRECTIONS][2] = {
-      {-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1},
-  };
-
   if (board->state[y][x] != CELL_EMPTY) {
     return false;
   }
 
-  boardCell revTurn = reverseCell(board->turn);
-
   for (int i = 0; i < _BOARD_NUM_DIRECTIONS; ++i) {
-    int delta_x = directions[i][0];
-    int delta_y = directions[i][1];
+    int delta_x = MOVE_DIRECTIONS[i][0];
+    int delta_y = MOVE_DIRECTIONS[i][1];
 
     if (isDirectionCorrect(board, x, y, delta_x, delta_y))
       return true;
@@ -90,56 +107,73 @@ bool isMoveCorrect(const gameBoard *board, int x, int y) {
 }
 
 void boardCalcLegalMoves(gameBoard *board) {
+  CHECK_NULL(board);
+
+  board->legal_count = 0;
   for (int x = 0; x < 8; ++x) {
     for (int y = 0; y < 8; ++y) {
-      board->legal[y][x] = isMoveCorrect(board, x, y);
+      if ((board->legal_move[y][x] = isMoveCorrect(board, x, y)))
+        board->legal_count++;
+    }
+  }
+
+  // TODO: Find a way to communicate this through UI
+  // If one player cannot move calculate moves for the other one
+  if (board->legal_count == 0) {
+    board->turn = reverseCell(board->turn);
+    for (int x = 0; x < 8; ++x) {
+      for (int y = 0; y < 8; ++y) {
+        if ((board->legal_move[y][x] = isMoveCorrect(board, x, y)))
+          board->legal_count++;
+      }
     }
   }
 }
 
 void boardHandleClick(gameBoard *board, int x, int y,
                       const SDL_FRect *board_pos) {
+  CHECK_NULL(board);
+  CHECK_NULL(board_pos);
+
   const float CELL_WIDTH = board_pos->w / 8.f;
-  const float CELL_HALF_WIDTH = board_pos->w / 16.f;
   const float CELL_HEIGHT = board_pos->h / 8.f;
-  const float CELL_HALF_HEIGHT = board_pos->h / 16.f;
-  if (x < board_pos->x || y < board_pos->y || x > board_pos->x + board_pos->w ||
-      y > board_pos->y + board_pos->h)
+
+  if (!IN_BOUNDS(x, y, board_pos))
     return;
+
   int cell_x = (x - board_pos->x) / CELL_WIDTH;
   int cell_y = (y - board_pos->y) / CELL_HEIGHT;
 
   if (board->state[cell_y][cell_x] != CELL_EMPTY ||
-      !board->legal[cell_y][cell_x])
+      !board->legal_move[cell_y][cell_x])
     return;
 
   boardMove(board, cell_x, cell_y);
 }
 
 void boardMove(gameBoard *board, int x, int y) {
-  if (!board->legal[y][x])
+  CHECK_NULL(board);
+
+  if (!board->legal_move[y][x])
     return;
 
-  const int directions[_BOARD_NUM_DIRECTIONS][2] = {
-      {-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {0, 1}, {1, -1}, {1, 0}, {1, 1},
-  };
   bool valid_direction[_BOARD_NUM_DIRECTIONS] = {false, false, false, false,
                                                  false, false, false, false};
 
   for (int i = 0; i < _BOARD_NUM_DIRECTIONS; ++i) {
-    int delta_x = directions[i][0];
-    int delta_y = directions[i][1];
+    int delta_x = MOVE_DIRECTIONS[i][0];
+    int delta_y = MOVE_DIRECTIONS[i][1];
 
     valid_direction[i] = isDirectionCorrect(board, x, y, delta_x, delta_y);
   }
 
+  boardCell revTurn = reverseCell(board->turn);
   for (int i = 0; i < _BOARD_NUM_DIRECTIONS; ++i) {
     if (!valid_direction[i])
       continue;
 
-    boardCell revTurn = reverseCell(board->turn);
-    int dx = directions[i][0];
-    int dy = directions[i][1];
+    int dx = MOVE_DIRECTIONS[i][0];
+    int dy = MOVE_DIRECTIONS[i][1];
     int nx = x + dx;
     int ny = y + dy;
     while (nx >= 0 && nx < 8 && ny >= 0 && ny < 8) {
@@ -155,12 +189,14 @@ void boardMove(gameBoard *board, int x, int y) {
   board->state[y][x] = board->turn;
   board->turn = reverseCell(board->turn);
   boardCalcLegalMoves(board);
+  boardReCalcScore(board);
 }
 
 void boardDraw(gameBoard *board, SDL_Renderer *renderer,
                const SDL_FRect *board_pos) {
-  if (board == NULL || renderer == NULL || board_pos == NULL)
-    return;
+  CHECK_NULL(board);
+  CHECK_NULL(renderer);
+  CHECK_NULL(board_pos);
 
   const float CELL_WIDTH = board_pos->w / 8.f;
   const float CELL_HALF_WIDTH = board_pos->w / 16.f;
@@ -174,8 +210,7 @@ void boardDraw(gameBoard *board, SDL_Renderer *renderer,
   float mx, my;
   SDL_GetMouseState(&mx, &my);
   int hover_x = -1, hover_y = -1;
-  if (mx > board_pos->x && my > board_pos->y &&
-      mx < board_pos->x + board_pos->w && my < board_pos->y + board_pos->h) {
+  if (IN_BOUNDS(mx, my, board_pos)) {
     hover_x = (mx - board_pos->x) / CELL_WIDTH;
     hover_y = (my - board_pos->y) / CELL_HEIGHT;
   }
@@ -203,7 +238,7 @@ void boardDraw(gameBoard *board, SDL_Renderer *renderer,
         break;
       case CELL_EMPTY:
       default:
-        if (board->legal[y][x])
+        if (board->legal_move[y][x])
           SDL_SetRenderDrawColor(renderer, 0x17, 0x55, 0x87, 0xff);
         else
           continue;
@@ -220,8 +255,17 @@ void boardDraw(gameBoard *board, SDL_Renderer *renderer,
   SDL_RenderRect(renderer, board_pos);
 }
 
+boardCell boardWin(gameBoard *board) {
+  if (board->scoreWhite == 0)
+    return CELL_BLACK;
+  if (board->scoreBlack == 0)
+    return CELL_WHITE;
+  if (board->legal_count == 0) // If board is filled, there are no legal moves
+    return (board->scoreBlack > board->scoreWhite) ? CELL_BLACK : CELL_WHITE;
+  return CELL_EMPTY; // No one wins
+}
+
 void boardDestory(gameBoard *board) {
-  if (board == NULL)
-    return;
+  CHECK_NULL(board);
   free(board);
 }

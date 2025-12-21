@@ -14,8 +14,9 @@ add_subdirectory(deps/SDL_ttf EXCLUDE_FROM_ALL)
 
 # Import assets
 FileEmbedAdd(assets/Knewave-Regular.ttf)
+FileEmbedAdd(assets/restart_icon.png)
 
-add_executable(reversi WIN32 src/main.c src/draw.c src/board.c)
+add_executable(reversi WIN32 src/main.c src/draw.c src/board.c src/assets.c)
 target_include_directories(reversi PRIVATE include)
 target_link_libraries(reversi PRIVATE SDL3::SDL3)
 target_link_libraries(reversi PRIVATE SDL3_ttf::SDL3_ttf)

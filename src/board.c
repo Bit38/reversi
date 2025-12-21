@@ -20,6 +20,11 @@ gameBoard *boardInit() {
   if (board == NULL)
     return NULL;
 
+  boardReset(board);
+  return board;
+}
+
+void boardReset(gameBoard *board) {
   board->turn = CELL_WHITE;
   board->scoreWhite = 2;
   board->scoreBlack = 2;
@@ -35,7 +40,6 @@ gameBoard *boardInit() {
     }
   }
   boardCalcLegalMoves(board);
-  return board;
 }
 
 void boardReCalcScore(gameBoard *board) {
@@ -130,7 +134,7 @@ void boardCalcLegalMoves(gameBoard *board) {
   }
 }
 
-void boardHandleClick(gameBoard *board, int x, int y,
+void boardHandleClick(gameBoard *board, SDL_FPoint *mouse,
                       const SDL_FRect *board_pos) {
   CHECK_NULL(board);
   CHECK_NULL(board_pos);
@@ -138,11 +142,11 @@ void boardHandleClick(gameBoard *board, int x, int y,
   const float CELL_WIDTH = board_pos->w / 8.f;
   const float CELL_HEIGHT = board_pos->h / 8.f;
 
-  if (!IN_BOUNDS(x, y, board_pos))
+  if (!SDL_PointInRectFloat(mouse, board_pos))
     return;
 
-  int cell_x = (x - board_pos->x) / CELL_WIDTH;
-  int cell_y = (y - board_pos->y) / CELL_HEIGHT;
+  int cell_x = (mouse->x - board_pos->x) / CELL_WIDTH;
+  int cell_y = (mouse->y - board_pos->y) / CELL_HEIGHT;
 
   if (board->state[cell_y][cell_x] != CELL_EMPTY ||
       !board->legal_move[cell_y][cell_x])
@@ -239,7 +243,10 @@ void boardDraw(gameBoard *board, SDL_Renderer *renderer,
       case CELL_EMPTY:
       default:
         if (board->legal_move[y][x])
-          SDL_SetRenderDrawColor(renderer, 0x17, 0x55, 0x87, 0xff);
+          if (board->turn == CELL_WHITE)
+            SDL_SetRenderDrawColor(renderer, 0xff, 0xff, 0xff, 0x66);
+          else
+            SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0x66);
         else
           continue;
       }

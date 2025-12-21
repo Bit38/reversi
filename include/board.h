@@ -15,9 +15,10 @@ typedef struct gameBoard {
 } gameBoard;
 
 gameBoard *boardInit();
+void boardReset(gameBoard *board);
 void boardReCalcScore(gameBoard *board);
 void boardCalcLegalMoves(gameBoard *board);
-void boardHandleClick(gameBoard *board, int x, int y,
+void boardHandleClick(gameBoard *board, SDL_FPoint *mouse,
                       const SDL_FRect *board_pos);
 void boardMove(gameBoard *board, int x, int y);
 void boardDraw(gameBoard *board, SDL_Renderer *renderer,

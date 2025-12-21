@@ -15,19 +15,25 @@ SDL_Texture *getTextTexture(SDL_Renderer *renderer, TTF_Font *font, char *text,
 typedef enum TextAlign {
   AlignLeftTop,
   // AlignRightTop,
-  // AlignCenterTop,
+  AlignCenterTop,
   AlignLeftCenter,
   AlignRightCenter,
-  // AlignCenter,
+  AlignCenter,
   // AlignLeftBottom,
   // AlignRightBottom,
-  // AlignCenterBottom
-} TextAlign;
+  AlignCenterBottom
+} Align;
 
+SDL_FRect drawTextureAlignScale(SDL_Renderer *renderer, SDL_Texture *tex,
+                                SDL_FRect *texRect, int x, int y,
+                                Align alignment, float scale);
 void drawTextAlign(SDL_Renderer *renderer, TTF_Font *font, char *text, int x,
-                   int y, TextAlign alignment);
+                   int y, Align alignment);
 
 #define drawText(renderer, font, text, x, y)                                   \
   drawTextAlign((renderer), (font), (text), (x), (y), AlignLeftTop)
+#define drawTextureAlign(renderer, tex, texRect, x, y, alignment)              \
+  drawTextureAlignScale((renderer), (tex), (texRect), (x), (y), (alignment),   \
+                        1.f)
 
 #endif // INCLUDE_DRAW_H_

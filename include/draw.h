@@ -50,4 +50,8 @@ SDL_FRect drawBufferedTextAlignScale(BufferedText *bf, SDL_Renderer *renderer,
   drawBufferedTextAlignScale(bf, renderer, x, y, alignment, 1.f)
 void destroyBufferedText(BufferedText *bf);
 
+// Creates blinking effect
+// Returns bool that switches every `ms` miliseconds
+#define DRAW_EVERY(ms) ((SDL_GetTicks() / (ms)) % 2 == 0)
+
 #endif // INCLUDE_DRAW_H_

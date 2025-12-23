@@ -44,6 +44,7 @@ bool sdlInit() {
   return true;
 }
 
+char formatBuffer[100];
 int main(int argc, char *argv[]) {
   if (!sdlInit())
     return EXIT_FAILURE;
@@ -56,7 +57,15 @@ int main(int argc, char *argv[]) {
   BufferedText whiteScore;
   BufferedText blackScore;
   BufferedText turnInfo;
+  SDL_FRect turnInfoRect;
   SDL_FRect restartBtn;
+
+  SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+  updateBufferedText(&whiteScore, renderer, scoreFont, "White: 2");
+  updateBufferedText(&turnInfo, renderer, turnFont, "Turn: White");
+
+  SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+  updateBufferedText(&blackScore, renderer, scoreFont, "2 :Black");
 
   bool quit = false;
   while (!quit) {
@@ -72,25 +81,35 @@ int main(int argc, char *argv[]) {
           boardReset(board);
 
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        char scoreW[100];
-        sprintf(scoreW, "White: %d", board->scoreWhite);
-        updateBufferedText(&whiteScore, renderer, scoreFont, scoreW);
+        snprintf(formatBuffer, 100, "White: %d", board->scoreWhite);
+        updateBufferedText(&whiteScore, renderer, scoreFont, formatBuffer);
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        char scoreB[100];
-        sprintf(scoreB, "%d: Black", board->scoreBlack);
-        updateBufferedText(&blackScore, renderer, scoreFont, scoreB);
+        snprintf(formatBuffer, 100, "%d :Black", board->scoreBlack);
+        updateBufferedText(&blackScore, renderer, scoreFont, formatBuffer);
 
-        switch (board->turn) {
-        case CELL_BLACK:
-          SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-          updateBufferedText(&turnInfo, renderer, turnFont, "Turn: Black");
+        switch (boardWin(board)) {
+        case CELL_EMPTY:
+          switch (board->turn) {
+          case CELL_BLACK:
+            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+            updateBufferedText(&turnInfo, renderer, turnFont, "Turn: Black");
+            break;
+          case CELL_WHITE:
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            updateBufferedText(&turnInfo, renderer, turnFont, "Turn: White");
+            break;
+          default:
+            break;
+          }
           break;
         case CELL_WHITE:
           SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-          updateBufferedText(&turnInfo, renderer, turnFont, "Turn: White");
+          updateBufferedText(&turnInfo, renderer, turnFont, "White wins!");
           break;
-        default:
+        case CELL_BLACK:
+          SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+          updateBufferedText(&turnInfo, renderer, turnFont, "Black wins!");
           break;
         }
       }
@@ -106,7 +125,14 @@ int main(int argc, char *argv[]) {
     restartBtn =
         drawTextureAlignScale(renderer, restartButton.tex, &restartButton.rect,
                               400, 5, AlignCenterTop, 0.2f);
-    drawBufferedTextAlign(&turnInfo, renderer, 400, 115, AlignCenterBottom);
+
+    if ((board->skippedTurn || boardWin(board) != CELL_EMPTY) &&
+        DRAW_EVERY(500)) {
+      SDL_SetRenderDrawColor(renderer, 255, 60, 60, 255);
+      SDL_RenderFillRect(renderer, &turnInfoRect);
+    }
+    turnInfoRect =
+        drawBufferedTextAlign(&turnInfo, renderer, 400, 115, AlignCenterBottom);
 
     // Consider using event driven redraw
     boardDraw(board, renderer, &boardRect);

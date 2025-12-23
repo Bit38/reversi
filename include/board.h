@@ -10,6 +10,7 @@ typedef struct gameBoard {
   boardCell turn;
 
   int scoreBlack, scoreWhite, legal_count;
+  bool skippedTurn;
   bool legal_move[8][8];
   boardCell state[8][8];
 } gameBoard;

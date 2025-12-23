@@ -28,6 +28,7 @@ void boardReset(gameBoard *board) {
   board->turn = CELL_WHITE;
   board->scoreWhite = 2;
   board->scoreBlack = 2;
+  board->skippedTurn = false;
 
   for (int x = 0; x < 8; ++x) {
     for (int y = 0; y < 8; ++y) {
@@ -113,6 +114,7 @@ bool isMoveCorrect(const gameBoard *board, int x, int y) {
 void boardCalcLegalMoves(gameBoard *board) {
   CHECK_NULL(board);
 
+  board->skippedTurn = false;
   board->legal_count = 0;
   for (int x = 0; x < 8; ++x) {
     for (int y = 0; y < 8; ++y) {
@@ -124,6 +126,7 @@ void boardCalcLegalMoves(gameBoard *board) {
   // TODO: Find a way to communicate this through UI
   // If one player cannot move calculate moves for the other one
   if (board->legal_count == 0) {
+    board->skippedTurn = true;
     board->turn = reverseCell(board->turn);
     for (int x = 0; x < 8; ++x) {
       for (int y = 0; y < 8; ++y) {

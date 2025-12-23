@@ -53,12 +53,9 @@ int main(int argc, char *argv[]) {
   board = boardInit();
   const SDL_FRect boardRect = {20.f, 120.f, 760.f, 760.f};
 
-  SDL_Texture *whiteScore;
-  SDL_FRect whiteRect;
-  SDL_Texture *blackScore;
-  SDL_FRect blackRect;
-  SDL_Texture *turnTex;
-  SDL_FRect turnRect;
+  BufferedText whiteScore;
+  BufferedText blackScore;
+  BufferedText turnInfo;
   SDL_FRect restartBtn;
 
   bool quit = false;
@@ -74,34 +71,27 @@ int main(int argc, char *argv[]) {
         if (SDL_PointInRectFloat(&mouse, &restartBtn))
           boardReset(board);
 
-        SDL_DestroyTexture(whiteScore);
-        SDL_DestroyTexture(blackScore);
-        SDL_DestroyTexture(turnTex);
-
-        // TODO: Make some sort of structure and "api" for buffered text
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
         char scoreW[100];
         sprintf(scoreW, "White: %d", board->scoreWhite);
-        whiteScore = getTextTexture(renderer, scoreFont, scoreW, &whiteRect);
+        updateBufferedText(&whiteScore, renderer, scoreFont, scoreW);
 
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         char scoreB[100];
         sprintf(scoreB, "%d: Black", board->scoreBlack);
-        blackScore = getTextTexture(renderer, scoreFont, scoreB, &blackRect);
+        updateBufferedText(&blackScore, renderer, scoreFont, scoreB);
 
         switch (board->turn) {
         case CELL_BLACK:
           SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-          turnTex =
-              getTextTexture(renderer, turnFont, "Turn: Black", &turnRect);
+          updateBufferedText(&turnInfo, renderer, turnFont, "Turn: Black");
           break;
         case CELL_WHITE:
           SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-          turnTex =
-              getTextTexture(renderer, turnFont, "Turn: White", &turnRect);
+          updateBufferedText(&turnInfo, renderer, turnFont, "Turn: White");
           break;
         default:
-          turnTex = NULL;
+          break;
         }
       }
     }
@@ -109,16 +99,14 @@ int main(int argc, char *argv[]) {
     SDL_SetRenderDrawColor(renderer, 15, 82, 0, 255);
     SDL_RenderClear(renderer);
 
-    drawTextureAlign(renderer, whiteScore, &whiteRect, boardRect.x, 60,
-                     AlignLeftCenter);
-
-    drawTextureAlign(renderer, blackScore, &blackRect,
-                     boardRect.x + boardRect.w, 60, AlignRightCenter);
-
+    drawBufferedTextAlign(&whiteScore, renderer, boardRect.x, 60,
+                          AlignLeftCenter);
+    drawBufferedTextAlign(&blackScore, renderer, boardRect.x + boardRect.w, 60,
+                          AlignRightCenter);
     restartBtn =
         drawTextureAlignScale(renderer, restartButton.tex, &restartButton.rect,
                               400, 5, AlignCenterTop, 0.2f);
-    drawTextureAlign(renderer, turnTex, &turnRect, 400, 115, AlignCenterBottom);
+    drawBufferedTextAlign(&turnInfo, renderer, 400, 115, AlignCenterBottom);
 
     // Consider using event driven redraw
     boardDraw(board, renderer, &boardRect);

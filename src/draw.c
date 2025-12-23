@@ -143,3 +143,23 @@ void drawAlign(SDL_Renderer *renderer, TTF_Font *font, char *text, int x, int y,
   drawTextureAlign(renderer, tex, &originRect, x, y, alignment);
   SDL_DestroyTexture(tex);
 }
+
+void updateBufferedText(BufferedText *bf, SDL_Renderer *renderer,
+                        TTF_Font *font, char *text) {
+  if (bf->tex != NULL)
+    SDL_DestroyTexture(bf->tex);
+  bf->tex = getTextTexture(renderer, font, text, &bf->rect);
+}
+
+inline SDL_FRect drawBufferedTextAlignScale(BufferedText *bf,
+                                            SDL_Renderer *renderer, int x,
+                                            int y, Align alignment,
+                                            float scale) {
+  return drawTextureAlignScale(renderer, bf->tex, &bf->rect, x, y, alignment,
+                               scale);
+}
+
+void destroyBufferedText(BufferedText *bf) {
+  if (bf->tex != NULL)
+    SDL_DestroyTexture(bf->tex);
+};

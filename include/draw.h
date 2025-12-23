@@ -36,4 +36,18 @@ void drawTextAlign(SDL_Renderer *renderer, TTF_Font *font, char *text, int x,
   drawTextureAlignScale((renderer), (tex), (texRect), (x), (y), (alignment),   \
                         1.f)
 
+typedef struct {
+  SDL_Texture *tex;
+  SDL_FRect rect;
+} BufferedText;
+
+void updateBufferedText(BufferedText *bf, SDL_Renderer *renderer,
+                        TTF_Font *font, char *text);
+SDL_FRect drawBufferedTextAlignScale(BufferedText *bf, SDL_Renderer *renderer,
+                                     int x, int y, Align alignment,
+                                     float scale);
+#define drawBufferedTextAlign(bf, renderer, x, y, alignment)                   \
+  drawBufferedTextAlignScale(bf, renderer, x, y, alignment, 1.f)
+void destroyBufferedText(BufferedText *bf);
+
 #endif // INCLUDE_DRAW_H_
